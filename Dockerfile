@@ -1,9 +1,15 @@
+FROM golang:1.24-alpine AS builder
+
+WORKDIR /src
+COPY . .
+RUN CGO_ENABLED=0 go build -mod=vendor -o /ld-find-code-refs ./cmd/ld-find-code-refs
+
 FROM alpine:3.22.2
 
-RUN apk update
-RUN apk add --no-cache git
-RUN apk add --no-cache openssh
+# bash for command alias scripts run from coderefs.yaml
+RUN apk add --no-cache git openssh bash
 
-COPY ld-find-code-refs /usr/local/bin/ld-find-code-refs
+COPY --from=builder /ld-find-code-refs /usr/local/bin/ld-find-code-refs
+COPY entrypoint.sh /entrypoint.sh
 
-ENTRYPOINT ["ld-find-code-refs"]
+ENTRYPOINT ["/entrypoint.sh"]

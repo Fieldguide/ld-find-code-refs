@@ -1,0 +1,21 @@
+name: 'LaunchDarkly Code References (offline)'
+description: 'Count feature flag code references from a flag keys file, without the LaunchDarkly API'
+inputs:
+    flag-keys-file:
+        description: 'Path to a file containing feature flag keys, one per line'
+        required: true
+    dir:
+        description: 'Directory to scan, relative to the workspace'
+        required: false
+        default: '.'
+    out-dir:
+        description: 'If set, directory to write the CSV and reference-count JSON output to'
+        required: false
+        default: ''
+runs:
+    using: 'docker'
+    image: 'Dockerfile'
+    env:
+        LD_FLAG_KEYS_FILE: ${{ inputs.flag-keys-file }}
+        LD_DIR: ${{ inputs.dir }}
+        LD_OUT_DIR: ${{ inputs.out-dir }}
