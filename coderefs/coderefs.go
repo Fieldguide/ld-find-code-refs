@@ -116,10 +116,24 @@ func generateOfflineOutput(opts options.Options, matcher search.Matcher, branch 
 		}
 		log.Info.Printf("wrote code reference counts to %s", jsonPath)
 
-		flagAliases := make(map[string][]string)
+		matchedAliases := make(map[string][]string)
+		for _, ref := range branch.References {
+			for _, hunk := range ref.Hunks {
+				if len(hunk.Aliases) > 0 {
+					matchedAliases[hunk.FlagKey] = append(matchedAliases[hunk.FlagKey], hunk.Aliases...)
+				}
+			}
+		}
+		flagAliases := make(map[string]ld.FlagAliasesRep)
 		for _, em := range matcher.Elements {
-			for flag, aliases := range em.Aliases {
-				flagAliases[flag] = append(flagAliases[flag], aliases...)
+			for flag, generated := range em.Aliases {
+				if len(generated) == 0 && len(matchedAliases[flag]) == 0 {
+					continue
+				}
+				flagAliases[flag] = ld.FlagAliasesRep{
+					Generated: generated,
+					Matched:   helpers.Dedupe(matchedAliases[flag]),
+				}
 			}
 		}
 		aliasesPath, err := branch.WriteAliasesToJSON(opts.OutDir, projKey, repoName, branch.Head, flagAliases)

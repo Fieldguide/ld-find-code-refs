@@ -764,9 +764,17 @@ func (b BranchRep) PrintReferenceCountTable() {
 	table.Render()
 }
 
-// WriteAliasesToJSON writes the generated flag-to-aliases map alongside the
-// reference-count JSON so consumers can review what counts as a reference.
-func (b BranchRep) WriteAliasesToJSON(outDir, projKey, repo, sha string, aliases map[string][]string) (string, error) {
+// FlagAliasesRep records the aliases generated for a flag and the subset
+// that matched at least one code reference.
+type FlagAliasesRep struct {
+	Generated []string `json:"generated"`
+	Matched   []string `json:"matched"`
+}
+
+// WriteAliasesToJSON writes the per-flag generated and matched aliases
+// alongside the reference-count JSON so consumers can review what counts as
+// a reference and whether the alias config is producing noise.
+func (b BranchRep) WriteAliasesToJSON(outDir, projKey, repo, sha string, aliases map[string]FlagAliasesRep) (string, error) {
 	var tag string
 	if len(sha) >= shortShaLength {
 		tag = sha[:shortShaLength]
