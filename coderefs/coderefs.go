@@ -115,6 +115,18 @@ func generateOfflineOutput(opts options.Options, matcher search.Matcher, branch 
 			log.Error.Fatalf("error writing code reference counts to json: %s", err)
 		}
 		log.Info.Printf("wrote code reference counts to %s", jsonPath)
+
+		flagAliases := make(map[string][]string)
+		for _, em := range matcher.Elements {
+			for flag, aliases := range em.Aliases {
+				flagAliases[flag] = append(flagAliases[flag], aliases...)
+			}
+		}
+		aliasesPath, err := branch.WriteAliasesToJSON(opts.OutDir, projKey, repoName, branch.Head, flagAliases)
+		if err != nil {
+			log.Error.Fatalf("error writing flag aliases to json: %s", err)
+		}
+		log.Info.Printf("wrote flag aliases to %s", aliasesPath)
 	}
 
 	branch.PrintReferenceCountTable()

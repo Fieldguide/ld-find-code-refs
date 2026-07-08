@@ -8,6 +8,7 @@ import (
 type ElementMatcher struct {
 	ProjKey                     string
 	Elements                    []string
+	Aliases                     map[string][]string
 	Dir                         string
 	allElementAndAliasesMatcher ahocorasick.AhoCorasick
 	matcherByElement            map[string]ahocorasick.AhoCorasick
@@ -71,6 +72,7 @@ func NewElementMatcher(projKey, dir, delimiters string, elements []string, alias
 
 	return ElementMatcher{
 		Elements:                    elements,
+		Aliases:                     aliasesByElement,
 		ProjKey:                     projKey,
 		Dir:                         dir,
 		matcherByElement:            flagMatcherByKey,

@@ -763,3 +763,30 @@ func (b BranchRep) PrintReferenceCountTable() {
 	table.Bulk(truncatedData)
 	table.Render()
 }
+
+// WriteAliasesToJSON writes the generated flag-to-aliases map alongside the
+// reference-count JSON so consumers can review what counts as a reference.
+func (b BranchRep) WriteAliasesToJSON(outDir, projKey, repo, sha string, aliases map[string][]string) (string, error) {
+	var tag string
+	if len(sha) >= shortShaLength {
+		tag = sha[:shortShaLength]
+	} else {
+		tag = b.Name
+	}
+
+	absPath, err := validation.NormalizeAndValidatePath(outDir)
+	if err != nil {
+		return "", fmt.Errorf("invalid outDir '%s': %w", outDir, err)
+	}
+	path := filepath.Join(absPath, fmt.Sprintf("aliases_%s_%s_%s.json", projKey, repo, tag))
+
+	data, err := json.Marshal(aliases)
+	if err != nil {
+		return "", err
+	}
+
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		return "", err
+	}
+	return path, nil
+}
