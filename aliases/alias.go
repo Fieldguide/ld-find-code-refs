@@ -17,7 +17,6 @@ import (
 
 	"github.com/launchdarkly/ld-find-code-refs/v2/internal/helpers"
 	"github.com/launchdarkly/ld-find-code-refs/v2/internal/log"
-	"github.com/launchdarkly/ld-find-code-refs/v2/internal/validation"
 	"github.com/launchdarkly/ld-find-code-refs/v2/options"
 )
 
@@ -205,8 +204,13 @@ func processFileContent(aliases []options.Alias, dir string) (FileContentsMap, e
 				continue
 			}
 
-			if !validation.FileExists(path) {
+			info, err := os.Stat(path)
+			if err != nil {
 				return nil, fmt.Errorf("filepattern '%s': could not find file at path '%s'", aliasId, path)
+			}
+			// Globs like **/*.ts can match directories with file-like names
+			if info.IsDir() {
+				continue
 			}
 			/* #nosec */
 			data, err := os.ReadFile(path)
