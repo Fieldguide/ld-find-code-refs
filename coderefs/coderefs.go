@@ -14,6 +14,15 @@ import (
 )
 
 func Run(opts options.Options, output bool) {
+	offline := opts.IsOffline()
+
+	if offline {
+		// In offline mode, set up a synthetic project so the matcher has an entry to iterate over.
+		if len(opts.Projects) == 0 && opts.ProjKey == "" {
+			opts.Projects = []options.Project{{Key: "offline"}}
+		}
+	}
+
 	if len(opts.ProjKey) > 0 {
 		opts.Projects = append(opts.Projects, options.Project{
 			Key: opts.ProjKey,
@@ -25,7 +34,11 @@ func Run(opts options.Options, output bool) {
 	}
 
 	log.Info.Printf("absolute directory path: %s", absPath)
-	ldApi := ld.InitApiClient(ld.ApiOptions{ApiKey: opts.AccessToken, BaseUri: opts.BaseUri, UserAgent: helpers.GetUserAgent(opts.UserAgent)})
+
+	var ldApi ld.ApiClient
+	if !offline {
+		ldApi = ld.InitApiClient(ld.ApiOptions{ApiKey: opts.AccessToken, BaseUri: opts.BaseUri, UserAgent: helpers.GetUserAgent(opts.UserAgent)})
+	}
 
 	branchName := opts.Branch
 	revision := opts.Revision
@@ -67,6 +80,11 @@ func Run(opts options.Options, output bool) {
 		CommitTime:       commitTime,
 	}
 
+	if offline {
+		generateOfflineOutput(opts, matcher, branch)
+		return
+	}
+
 	if output {
 		generateHunkOutput(opts, matcher, branch, repoParams, ldApi)
 	}
@@ -74,6 +92,43 @@ func Run(opts options.Options, output bool) {
 	if gitClient != nil {
 		runExtinctions(opts, matcher, branch, repoParams, gitClient, ldApi)
 	}
+}
+
+func generateOfflineOutput(opts options.Options, matcher search.Matcher, branch ld.BranchRep) {
+	if opts.OutDir != "" {
+		projKey := "offline"
+		if len(opts.Projects) > 0 {
+			projKey = opts.Projects[0].Key
+		}
+		repoName := opts.RepoName
+		if repoName == "" {
+			repoName = "offline"
+		}
+		outPath, err := branch.WriteToCSV(opts.OutDir, projKey, repoName, branch.Head)
+		if err != nil {
+			log.Error.Fatalf("error writing code references to csv: %s", err)
+		}
+		log.Info.Printf("wrote code references to %s", outPath)
+
+		jsonPath, err := branch.WriteCountsToJSON(opts.OutDir, projKey, repoName, branch.Head)
+		if err != nil {
+			log.Error.Fatalf("error writing code reference counts to json: %s", err)
+		}
+		log.Info.Printf("wrote code reference counts to %s", jsonPath)
+	}
+
+	branch.PrintReferenceCountTable()
+
+	totalFlags := 0
+	for _, searchElems := range matcher.Elements {
+		totalFlags += len(searchElems.Elements)
+	}
+	log.Info.Printf(
+		"offline scan found %d code references across %d flags and %d files",
+		branch.TotalHunkCount(),
+		totalFlags,
+		len(branch.References),
+	)
 }
 
 func Prune(opts options.Options, branches []string) {

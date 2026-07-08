@@ -713,6 +713,31 @@ func (b BranchRep) CountByProjectAndFlag(matcher [][]string, projects []string) 
 	return refCountByFlag
 }
 
+func (b BranchRep) WriteCountsToJSON(outDir, projKey, repo, sha string) (string, error) {
+	var tag string
+	if len(sha) >= shortShaLength {
+		tag = sha[:shortShaLength]
+	} else {
+		tag = b.Name
+	}
+
+	absPath, err := validation.NormalizeAndValidatePath(outDir)
+	if err != nil {
+		return "", fmt.Errorf("invalid outDir '%s': %w", outDir, err)
+	}
+	path := filepath.Join(absPath, fmt.Sprintf("coderefs_%s_%s_%s.json", projKey, repo, tag))
+
+	data, err := json.Marshal(b.CountAll())
+	if err != nil {
+		return "", err
+	}
+
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		return "", err
+	}
+	return path, nil
+}
+
 func (b BranchRep) PrintReferenceCountTable() {
 	data := tableData{}
 
