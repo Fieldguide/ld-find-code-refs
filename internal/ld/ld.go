@@ -763,3 +763,38 @@ func (b BranchRep) PrintReferenceCountTable() {
 	table.Bulk(truncatedData)
 	table.Render()
 }
+
+// FlagAliasesRep records the aliases generated for a flag and the subset
+// that matched at least one code reference.
+type FlagAliasesRep struct {
+	Generated []string `json:"generated"`
+	Matched   []string `json:"matched"`
+}
+
+// WriteAliasesToJSON writes the per-flag generated and matched aliases
+// alongside the reference-count JSON so consumers can review what counts as
+// a reference and whether the alias config is producing noise.
+func (b BranchRep) WriteAliasesToJSON(outDir, projKey, repo, sha string, aliases map[string]FlagAliasesRep) (string, error) {
+	var tag string
+	if len(sha) >= shortShaLength {
+		tag = sha[:shortShaLength]
+	} else {
+		tag = b.Name
+	}
+
+	absPath, err := validation.NormalizeAndValidatePath(outDir)
+	if err != nil {
+		return "", fmt.Errorf("invalid outDir '%s': %w", outDir, err)
+	}
+	path := filepath.Join(absPath, fmt.Sprintf("aliases_%s_%s_%s.json", projKey, repo, tag))
+
+	data, err := json.Marshal(aliases)
+	if err != nil {
+		return "", err
+	}
+
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		return "", err
+	}
+	return path, nil
+}

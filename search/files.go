@@ -22,11 +22,21 @@ type ignore struct {
 func newIgnore(path string, ignoreFiles []string) ignore {
 	ignores := make([]gitignore.IgnoreMatcher, 0, len(ignoreFiles))
 	for _, ignoreFile := range ignoreFiles {
-		i, err := gitignore.NewGitIgnore(filepath.Join(path, ignoreFile))
+		lines, err := readFileLines(filepath.Join(path, ignoreFile))
 		if err != nil {
 			continue
 		}
-		ignores = append(ignores, i)
+		// go-gitignore treats ".*"-style patterns as matching every path,
+		// which ignores the entire workspace. The walker already skips
+		// dotfiles and dot-directories, so the patterns are safe to drop.
+		cleaned := make([]string, 0, len(lines))
+		for _, line := range lines {
+			if trimmed := strings.TrimSpace(line); trimmed == ".*" || trimmed == ".*/" {
+				continue
+			}
+			cleaned = append(cleaned, line)
+		}
+		ignores = append(ignores, gitignore.NewGitIgnoreFromReader(path, strings.NewReader(strings.Join(cleaned, "\n"))))
 	}
 	return ignore{path: path, ignores: ignores}
 }
